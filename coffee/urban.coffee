@@ -1,17 +1,30 @@
 # todo
 # url: https://lichess.org/analysis/pgn/1.%20c3%20e5%202.%20f3%20Nc6%203.%20Qc2%20Nf6%204.%20Qd3%20d5%205.%20Qe3%20Bd6%206.%20Qf2%20e4%207.%20Kd1%20O-O%208.%20Qe1%20Re8%209.%20fxe4%20dxe4%2010.%20d3%20exd3%2011.%20exd3%20Rxe1+%2012.%20Kxe1%20Ng4%2013.%20Nf3%20Bf5%2014.%20h3%20Bg3+%2015.%20Kd2%20Nf2%2016.%20Rg1%20Bxd3%2017.%20Bxd3%20Qxd3+%2018.%20Ke1%20Qd1#36
 
-import {r4r,table,tr,td,input,form,div,br,span} from '../js/utils.js'
+import {log,r4r,table,tr,td,input,form,div,br,span,button} from '../js/utils.js'
+
+query = {}
+
+configure = =>
+	queryString = window.location.search
+	urlParams = new URLSearchParams queryString
+	query.fen = urlParams.get "fen"
+	if !query.fen then query.fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+	# query.fen = "8/8/8/4k3/3R4/2K5/8/8 w - - 0 1"
+	query
+
+console.log configure()
 
 BOKSTAVERA = true
 STRENGTH = 10
-
 READBOTH=true
 
+stockfish = null
 speaker = null
 voices = null
 queue = []
 speaking = 0
+game = null
 
 window.speechSynthesis.onvoiceschanged = -> voices = window.speechSynthesis.getVoices()
 
@@ -38,11 +51,13 @@ say = (m="") ->
 		speechSynthesis.speak speaker
 
 initSpeaker()
-stockfish = new Worker 'stockfish.js'
 
 init = =>
+	stockfish = new Worker 'stockfish.js'
 	board = null
-	game = new Chess()
+	game = new Chess query.fen
+	# log game
+	# stockfish.postMessage "position fen " + query.fen
 
 	# do not pick up pieces if the game is over
 	# only pick up pieces for White
@@ -58,25 +73,23 @@ init = =>
 
 		FEN = game.fen()
 
-		document.getElementById('fen').value = FEN
-
-		stockfish.postMessage "position fen"+" "+FEN
-		stockfish.postMessage 'go depth ' + STRENGTH
+		stockfish.postMessage "position fen " + FEN
+		#stockfish.postMessage 'go depth ' + STRENGTH
+		stockfish.postMessage 'go movetime 1000' # ms
 
 		stockfish.onmessage = (event) =>
-			#console.log event.data
+			console.log event.data
 			document.getElementById("bestmove").innerHTML = event.data
 			str = event.data
-			res = str.match /score/g
-				
-			if res == "score"
-				meldung = str.split " "
-				document.getElementById("sc").innerHTML = meldung[9]
+			message = str.split " "
+			if message.includes "score"
+				if message[8]=='cp' then score = -message[9]/100
+				if message[8]=='mate' then score = '#'+message[9]
+				document.getElementById("score").innerHTML = score
 			
-			res = str.split " "
-			
-			if res[0] == "bestmove"
-				zug = res[1].split ""
+			# res = str.split " "
+			if message[0] == "bestmove"
+				zug = message[1].split ""
 				botmovesource = zug[0]+zug[1]
 				botmovetarget = zug[2]+zug[3]
 				# document.getElementById("botmove").innerHTML = botmovesource;
@@ -91,42 +104,49 @@ init = =>
 				updateStatus()
 				#sound()
 
+	patch = (move, obj) ->
+		for key, value of obj
+			move = move.replace key, value
+		move
+
 	lastMove = =>
 		moves = game.history()
 		if moves.length == 0 then return ''
 		move = moves[moves.length-1]
 		oldmove = move
 
-		move = move.replaceAll "a", "!" # annars byts f ut mot filip
-		move = move.replaceAll "b", "@"
-		move = move.replaceAll "c", "_"
-		move = move.replaceAll "d", "$"
-		move = move.replaceAll "e", "%"
-		move = move.replaceAll "f", "^"
-		move = move.replaceAll "g", "&"
-		move = move.replaceAll "h", "*"
+		move = patch move, {a: "!",b: "@",c: "_",d: "$",e: "%",f: "^",g: "&",h: "*"}
+		move = patch move, {"!":"adam ","@":"bertil ","_":"seehsar ","$":"david ","%":"erik ","^":"filip ","&":"gustav ","*":"helge "}
+		move = patch move, {x: " slår ",N: "springare ",B: "löpare ",R: "torn ",Q: "dam ",K: "kung ","+": ", schack","#": ", schack matt",'O-O-O': 'kung lång','O-O': 'kung kort'}
 
-		move = move.replace "x","X"
-		move = move.replaceAll "!","alfa "
-		move = move.replaceAll "@","bravo "
-		move = move.replaceAll "_","charlie "
-		move = move.replaceAll "$","dällta "
-		move = move.replaceAll "%","eko "
-		move = move.replaceAll "^","filip "
-		move = move.replaceAll "&","golf "
-		move = move.replaceAll "*","hotel "
+		# move = move.replaceAll "a", "!"
+		# move = move.replaceAll "b", "@"
+		# move = move.replaceAll "c", "_"
+		# move = move.replaceAll "d", "$"
+		# move = move.replaceAll "e", "%"
+		# move = move.replaceAll "f", "^"
+		# move = move.replaceAll "g", "&"
+		# move = move.replaceAll "h", "*"
 
-		move = move.replace "X", " slår "
-		move = move.replace "N", "springare "
-		move = move.replace "B", "löpare "
-		move = move.replace "R", "torn "
-		move = move.replace "Q", "dam "
-		move = move.replace "K", "kung "
+		# move = move.replaceAll "!","adam "
+		# move = move.replaceAll "@","bertil "
+		# move = move.replaceAll "_","seehsar "
+		# move = move.replaceAll "$","david "
+		# move = move.replaceAll "%","erik "
+		# move = move.replaceAll "^","filip "
+		# move = move.replaceAll "&","gustav "
+		# move = move.replaceAll "*","helge "
 
-		move = move.replace "+", ", schack"
-		move = move.replace "#", ", schack matt"
-		move = move.replace 'O-O-O', 'kung lång'
-		move = move.replace 'O-O', 'kung kort'
+		# move = move.replace "x", " slår "
+		# move = move.replace "N", "springare "
+		# move = move.replace "B", "löpare "
+		# move = move.replace "R", "torn "
+		# move = move.replace "Q", "dam "
+		# move = move.replace "K", "kung "
+		# move = move.replace "+", ", schack"
+		# move = move.replace "#", ", schack matt"
+		# move = move.replace 'O-O-O', 'kung lång'
+		# move = move.replace 'O-O', 'kung kort'
 		console.log oldmove,'->',move
 		move
 
@@ -154,7 +174,8 @@ init = =>
 			if game.in_check() then status += ', ' + moveColor + ' is in check'
 		document.getElementById("status").innerHTML = status
 
-	cfg = {draggable:true, position:'start', onDragStart,onDrop,onSnapEnd}
+	cfg = {draggable:true, position:query.fen, onDragStart,onDrop,onSnapEnd}
+	console.log game.fen()
 	board = ChessBoard 'board', cfg
 
 # sound = =>
@@ -166,20 +187,23 @@ f = (a,b="") =>
 		td {},b+":"
 		td {id:a}
 
+newGame = => init()
+
+analyze = =>
+	window.location.href = "https://lichess.org/analysis/pgn/" + game.pgn().replaceAll " ","%20"
+
 r4r =>
 	table {},
 		tr {},
 			td {},
-				div {id:"board",style:"width: 400px"}
-				input {size:"50", id:"fen", style:"color: #de5410;font-size: 12px; ", type:"text"},
-					form {action:""},
-						input {type:"submit", value:"New Game"}
+				div {id:"board", style:"width:500px"}
+				button {onclick:newGame}, "New Game"
+				button {onclick:analyze}, "Analyze"
 		tr {},
-			# td {valign:top},
-#			table {},
 			f "PGN"
 			f "status"
 			f "bestmove"
-			f "sc","SCORE"
+			f "score"
 
-$(document).ready init
+init()
+#$(document).ready init

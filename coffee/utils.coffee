@@ -1,14 +1,14 @@
 # import h                from "https://cdn.skypack.dev/solid-js@1.2.6/h"
 import _                from 'https://cdn.skypack.dev/lodash'
 
-import { createSignal, createEffect, createMemo } from "https://cdn.skypack.dev/solid-js@1.2.6"
-import { createStore }  from "https://cdn.skypack.dev/solid-js@1.2.6/store"
+#import { createSignal, createEffect, createMemo } from "https://cdn.skypack.dev/solid-js@1.2.6"
+#import { createStore }  from "https://cdn.skypack.dev/solid-js@1.2.6/store"
 import h                from "https://cdn.skypack.dev/solid-js@1.2.6/h"
 import { render }       from "https://cdn.skypack.dev/solid-js@1.2.6/web"
 
-export signal = createSignal
-export effect = createEffect
-export memo = createMemo
+# export signal = createSignal
+# export effect = createEffect
+# export memo = createMemo
 
 export N = 8
 
@@ -57,16 +57,15 @@ export ul = (a...) => h "ul", a
 
 export Position = (index) -> "#{"abcdefgh"[col index]}#{"87654321"[row index]}"
 
+# export createLocalStore = (name,init) =>
+# 	localState = localStorage.getItem name
+# 	[state, setState] = createStore if localState then JSON.parse localState else init
+# 	createEffect () => localStorage.setItem name, JSON.stringify state
+# 	[state, setState]
 
-export createLocalStore = (name,init) =>
-	localState = localStorage.getItem name
-	[state, setState] = createStore if localState then JSON.parse localState else init
-	createEffect () => localStorage.setItem name, JSON.stringify state
-	[state, setState]
-
-export removeIndex = (array, index) =>
-	# [...array.slice 0, index, ...array.slice index + 1]
-	a = array.slice 0, index 
-	b = array.slice index + 1
-	console.log a.concat b
-	a.concat b
+# export removeIndex = (array, index) =>
+# 	# [...array.slice 0, index, ...array.slice index + 1]
+# 	a = array.slice 0, index 
+# 	b = array.slice index + 1
+# 	console.log a.concat b
+# 	a.concat b
